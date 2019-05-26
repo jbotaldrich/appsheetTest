@@ -1,5 +1,7 @@
 package com.sample.dibinder;
 
+import javax.inject.Singleton;
+
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 
 import com.google.gson.Gson;
@@ -11,9 +13,10 @@ public class AppBinder extends AbstractBinder {
 
 	@Override
 	protected void configure() {
-		bind(MockDatabase.class).to(DatabaseAdapter.class);
+		bind(MockDatabase.class).to(DatabaseAdapter.class).in(Singleton.class);
 		bind(new GsonBuilder().create()).to(Gson.class);
 
 	}
+
 
 }

@@ -11,7 +11,6 @@ public class DetailsData implements IdData{
 	private String phoneNumber;
 	private String photo;
 	private String bio;
-	private String token;
-	 
+	private String token; 
 	
 }
