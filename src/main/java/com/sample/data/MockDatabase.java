@@ -9,16 +9,19 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.sample.exceptions.NotFoundException;
 
-public class MockDatabase implements DatabaseAdapter {
+
+@SuppressWarnings("rawtypes")
+public class MockDatabase<K extends IdData> implements DatabaseAdapter<K> {
 
 	private final URI databaseURI;
-	private TreeSet<IdData> dataStore;
-	private Map<Integer, IdData> idPointer;
-	private Map<String, IdData> tokenPointer;
+	private TreeSet<K> dataStore;
+	private Map<Integer, K> idPointer;
+	private Map<String, K> tokenPointer;
 
 
-	public MockDatabase(URI databaseURI, TreeSet<IdData> initialData) {
+	public MockDatabase(URI databaseURI, TreeSet<K> initialData) {
 		this.databaseURI = databaseURI;
 		this.dataStore = initialData;
 		idPointer = new HashMap<>();
@@ -30,8 +33,25 @@ public class MockDatabase implements DatabaseAdapter {
 		
 	}
 	
+	public MockDatabase(URI databaseURI, List<K> initialData) {
+		idPointer = new HashMap<>();
+		tokenPointer = new HashMap<>();
+		this.databaseURI = databaseURI;
+		this.dataStore = new TreeSet<>();
+		initialData.stream().forEach(element -> this.put(element));
+	}
 	
-	
+	public MockDatabase() {
+		this.databaseURI = URI.create("fake");
+		this.dataStore = new TreeSet<K>();
+		idPointer = new HashMap<>();
+		tokenPointer = new HashMap<>();
+		this.dataStore.stream().forEach(dataElement -> {
+			idPointer.put(dataElement.getId(), dataElement);
+			tokenPointer.put(dataElement.getToken(), dataElement);
+		});
+		
+	}
 	
 	@Override
 	public void connect() {
@@ -46,27 +66,28 @@ public class MockDatabase implements DatabaseAdapter {
 	}
 
 	@Override
-	public void put(IdData data) {
+	public void put(K data) {
 		if (idPointer.containsKey(data.getId()) && data.getId() != -1) {
-			IdData oldData = idPointer.get(data.getId());
-			oldData = data;
+			idPointer.put(data.getId(), data);
 		} else {
-			data.setId(dataStore.last().getId() + 1);
+			data.setId(dataStore.isEmpty() ? 1 : dataStore.last().getId() + 1);
 			data.setToken(UUID.randomUUID().toString());
 			idPointer.put(data.getId(), data);
 			tokenPointer.put(data.getToken(), data);
+			dataStore.add(data);
 		}
 	}
 	
-	public List<IdData> scanTable(int numRecords, String token) throws NotFoundException {
-		if(!tokenPointer.containsKey(token)) {
+	public List<K> scanTable(int numRecords, String token) throws NotFoundException {
+		if(token != null && !tokenPointer.containsKey(token)) {
 			throw new NotFoundException("Unknown token " + token);
 		}
-		List<IdData> output = new ArrayList<>();
+		int accessibleRecords = dataStore.size() < numRecords ? dataStore.size() : numRecords;
+		List<K> output = new ArrayList<>();
 		if(token == null) {
-			output = dataStore.stream().limit(numRecords).collect(Collectors.toList());
+			output = dataStore.stream().limit(accessibleRecords).collect(Collectors.toList());
 		} else {
-			output = dataStore.tailSet(tokenPointer.get(token)).stream().limit(numRecords).collect(Collectors.toList());
+			output = dataStore.tailSet(tokenPointer.get(token)).stream().limit(accessibleRecords).collect(Collectors.toList());
 		}
 		return output;
 	}
@@ -81,7 +102,7 @@ public class MockDatabase implements DatabaseAdapter {
 	}
 
 	@Override
-	public IdData get(int id) throws NotFoundException {
+	public K get(int id) throws NotFoundException {
 		if(!idPointer.containsKey(id)) {
 			throw new NotFoundException("Unknown id passed to host " + id);
 		}

@@ -10,17 +10,19 @@ import com.sample.api.DetailsResponse;
 import com.sample.api.ListResponse;
 import com.sample.data.DatabaseAdapter;
 import com.sample.data.DetailsData;
-import com.sample.data.NotFoundException;
+import com.sample.data.MockDatabase;
+import com.sample.exceptions.NotFoundException;
 
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor(onConstructor = @__(@Inject))
 public class ApplicationManager {
 
 	private static final int MAX_NUM_RECORDS = 10;
 
-	@Inject
-	private DatabaseAdapter<DetailsData> adapter;
-
-	@Inject
-	private Gson gson;
+	
+	private final DatabaseAdapter<DetailsData> adapter;
+	private final Gson gson;
 
 	public String getDetails(int id) throws NotFoundException {
 		DetailsData data = adapter.get(id);
@@ -40,7 +42,7 @@ public class ApplicationManager {
 		
 		List<Integer> ids = detailsData.stream().limit(MAX_NUM_RECORDS).map(DetailsData::getId)
 				.collect(Collectors.toList());
-		String newToken = detailsData.size() <= MAX_NUM_RECORDS ? detailsData.get(MAX_NUM_RECORDS).getToken() : null;
+		String newToken = detailsData.size() > MAX_NUM_RECORDS ? detailsData.get(MAX_NUM_RECORDS).getToken() : null;
 		return gson.toJson(new ListResponse(ids, newToken));
 	}
 
